@@ -1,0 +1,104 @@
+---
+title: "MA4142: Regression and Multivariate Analysis"
+output: html_notebook
+---
+## Exploring Simple Regression
+### Authors:
+#### Tanmay Goyal - AI20BTECH11021, Tanay Yadav - AI20BTECH11026
+
+- **Setting up the working directory and loading the libraries**
+```{r}
+setwd("C:\\Users\\tanay\\OneDrive\\Documents\\Artificial Intelligence\\Semester 6\\MA4142 Regression and Multivariate Analysis\\PPT2")
+
+install.packages("mltools")
+library(mltools)
+library(data.table)
+library(psych)
+```
+
+- **Reading the [Dataset](https://college.cengage.com/mathematics/brase/understandable_statistics/7e/students/datasets/slr/excel/slr02.xls)**
+```{r}
+data = read.csv("Crickets.csv")
+data
+```
+
+The dataset predicts the number of times a cricket will chirp per second given the temperature.
+
+- **Visualizing the dataset**
+```{r}
+plot( Y ~ X , data = data)
+```
+
+- **Fitting a linear model ($y = ax + b$)**
+```{r}
+model = lm(Y ~ X, data = data)
+model
+```
+
+- **Summarizing the linear model**
+```{r}
+summary(model)
+```
+
+- **Visualizing the model**
+```{r}
+plot(Y ~ X, data=data) + abline(lm(Y ~ X, data=data) , col = 'red')
+```
+
+- **Fitting a 2nd-degree polynomial ($y = ax^2 + bx + c$)**
+```{r}
+model2 = lm(Y ~ X + I(X^2) , data = data)
+model2
+```
+
+- **Summarizing the polynomial model**
+```{r}
+summary(model2)
+```
+
+- **Predicting and visualizing the polynomial model**
+```{r}
+pred <- predict(model2)
+ix <- sort(data$X ,index.return=T)$ix
+
+plot(data$X , data$Y) + lines(data$X[ix], pred[ix], col='red', lwd=2)
+```
+
+- **Fitting a 3rd-degree polynomial model ($y = ax^3 + bx^2 + cx + d$)**
+```{r}
+model3 = lm(Y ~ X + I(X^2) + I(X^3) , data = data)
+model3
+```
+
+- **Summarizing the polynomial model**
+```{r}
+summary(model3)
+```
+
+- **Predicting and visualizing the polynomial model**
+```{r}
+pred <- predict(model3)
+ix <- sort(data$X ,index.return=T)$ix
+
+plot(data$X , data$Y) + lines(data$X[ix], pred[ix], col='red', lwd=2)
+```
+
+- **Fitting a 4th-degree polynomial model ($y = ax^4 + bx^3 + cx^2 + d$)**
+```{r}
+model4 = lm(Y ~ X + I(X^2) + I(X^3) + I(X^4) , data = data)
+model4
+```
+
+- **Summarizing the model**
+```{r}
+summary(model4)
+```
+*The 4th-degree polynomial model shows a lesser r-squared value as compared to the 3rd-degree polynomial regression model.* 
+
+- **Predicting and visualizing the polynomial model**
+```{r}
+pred <- predict(model4)
+ix <- sort(data$X ,index.return=T)$ix
+
+plot(data$X , data$Y) + lines(data$X[ix], pred[ix], col='red', lwd=2)
+```

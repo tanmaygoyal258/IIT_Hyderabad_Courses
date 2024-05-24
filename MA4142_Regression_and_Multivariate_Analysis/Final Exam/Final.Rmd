@@ -1,0 +1,214 @@
+Final Exam
+Tanmay Goyal
+AI20BTECH11021
+
+
+Setting the working directory and reading the data
+While saving the data, we removed all commas used to represent numbers because this causes the data to be loaded as character dtype.
+
+```{r}
+setwd("/Users/tanmaygoyal/Desktop/Assignments and Events/Regression Analysis")
+
+data = read.csv("FinalExam.csv" , sep = " " , header = TRUE)
+```
+
+```{r}
+head(data)
+```
+
+```{r}
+tail(data)
+```
+
+```{r}
+summary(data)
+```
+
+We find that each variable has its own range and thus, might need to be normalized.
+
+Removing the first column which is City.
+```{r}
+data <- data[,2:11]
+data
+```
+
+```{r}
+plot(data)
+````
+
+*Doing the factor analysis*
+
+```{r}
+library(psych)
+fa.parallel(data , n.iter = 100)
+```
+
+We find the suggested number of principal components and factors to be 2.
+
+```{r}
+# install.packages("GPArotation")
+library(GPArotation)
+fa <- fa(data , nfactors = 2 , method = "both")
+fa.diagram(fa$loadings)
+```
+
+```{r}
+library(ggcorrplot)
+corelation <- cor(data)
+corelation
+ggcorrplot(corelation)
+```
+
+We see that the Household Income is highly correlated to Income, which seems to be obvious. The dependent variable Housing is highly correlated to Income and almost does not depend on Median Age.
+
+We shall now plot the density graph for the dependent variable which is Housing
+
+```{r}
+library(ggpubr)
+ggdensity(data$Housing)
+````
+
+The dependent variable does appear to be normal. We shall now check this using the Shapiro-Wilk's test.
+```{r}
+shapiro.test(data$Housing)
+````
+The Shapiro-Wilk's test confirms the normality of the data.
+
+
+```{r}
+model <- lm(data$Housing ~. , data = data)
+```
+
+```{r}
+summary(model)
+```
+
+We find that for a 0.05 significance level, only Household Income is having a significant impact the Housing Variable, as seen in the correlation matrix. Median Age almost has little to no effect on the Housing Value.
+
+We can interpret the coefficients as follows:
+1. Given zero income, commute, literacy, Job_growth,, Physicians, Rape_rate, Restaurants, Median_Age and household income, the housing for a city shall be given by the intercept of 89192. 
+2. For an increase in income by 1 unit keeping all other factors constant, the housing decreases by 4.
+3.With an increase in commute by 1 unit keeping all other factors constant, the housing decreases by 1418.
+4. With an increase in 1 unit of either Literacy or Job Growth keeping all other factors constant, the housing value increase by around 2000.
+5. An increase in 1 physician keeping all other factors constant increases the Housing Value by 4.
+6. An one unit increase in the rape rate keeping all other factors constant decreases the Housing Value by around 340.
+7. As the median age increases by 1 year keeping all other factors constant, it decreases the housing Value by 767.
+8. An increase in income by 1 unit keeping all other factors constant increases  housing value by 3.
+
+We can make some causal statements because the difference in the coefficients is a lot. For example, an increase in 1 unit of Literacy or Job growth gives a significant boost to the Housing, whereas the rape rate and median age give a significant downfall to the Housing. However, some factors such as the Physicians, or income donot have that much of a significant impact on the dependent variable.
+
+```{r}
+plot(model)
+```
+
+
+We also calculate the VIF for the model
+
+```{r}
+library(regclass)
+VIF(model)
+````
+We see that Household Income and Income have very high Variation Influence factors. These are not very high though. Nevertheless, we shall thus, try removing the household income column.
+
+```{r}
+summary(lm(data$Housing ~., data = data[,-c(10)]))
+```
+This did not improve on our R-squared score. However, if we remove columns such as Physicians and Median Age which had a very high p-value in the initial summary (which means they donot have a major impact on our dependent variable), we can improve on the model.
+
+```{r}
+model2 <- lm(data$Housing ~., data = data[,-c(5 ,9 )])
+```
+
+```{r}
+summary(model2)
+```
+We find that the R-squared did improve, albeit not by a great margin.
+
+We shall again try to calcuate the VIF
+```{r}
+VIF(model2)
+```
+We see that the variance inflation factor for both the income variables has now decreases significantly.
+
+We shall also diagnose this model.
+```{r}
+plot(model2)
+```
+
+We test for autocoorelation.
+
+```{r}
+library(lmtest)
+dwtest(formula = model2 , alternative = "two.sided")
+```
+
+We find that the p-value is extremely high from our significance level of 0.05. Thus, we can accept the null hypothesis and say that our data is not autocorrelated.
+
+We also find the data does not follow our homoschadasticity assumptions to the T, since the Scale-Location Plot does not have a horizontal line. However, there are no wil deflections as well. So it does follow the assumption to certain extent. Nevertheless,  we will also try a weighted regression.
+
+```{r}
+wt <- 1 / lm(abs(model$residuals) ~ model$fitted.values)$fitted.values^2
+model_weighted <- lm(data$Housing  ~ . , data = data[] , weights = wt)
+```
+
+
+```{r}
+summary(model_weighted)
+````
+
+We see that our R-squared score has not improved by much. Apart from the intercept, the other coefficients remain the same. However, if our significance level still remains 0.05, none of the factors are significant. Thus, we would also have to change our significance levels.
+
+We shall also try ridge regression:
+```{r}
+library(ridge)
+model_ridge <- linearRidge(data$Housing ~. , data = data)
+summary(model_ridge)
+```
+
+We shall also find the outliers in model2, which gave us the best result.
+
+```{r}
+cooks.distance(model2)
+```
+
+```{r}
+plot(cooks.distance(model2))
+```
+
+Let us try removing the 6th and 17th point, which look like the major outliers.
+```{r}
+model3 <- lm(data$Housing[-c(6,17)] ~., data = data[-c(6,17),-c(5 ,9 )])
+summary(model3)
+```
+We immediately get an adjusted R-squared value of 0.8367, which is a significant improvement. 
+
+We also diagnose this model
+```{r}
+plot(model)
+```
+
+There is some deviation from homoscedasticty and Linearity, as evident from the scale-location plot and Residuals vs Fitted Plot. However, we donot need to worry so much as there are no wild deflections.
+
+However, we do try the weighted Regression nevertheless.
+
+```{r}
+wt <- 1 / lm(abs(model3$residuals) ~ model3$fitted.values)$fitted.values^2
+model_weighted2 <- lm(data$Housing[-c(6,17)]  ~ . , data = data[-c(6,17) , -c(5,9)] , weights = wt)
+summary(model_weighted2)
+```
+
+Using the weighted model gave us even better results, resulting in an adjusted R-squared of 0.98. 
+
+Thus, we shall stick with the best model we have got, which was weighted_model2, obtained by removing the two outliers, city F and city Q and removing the columns Physicians and Median Age, and then weighing the model.
+
+According to this model, Income, Commute, Restaurants and Household income are important factors in deciding the dependent variable which is Housing. Even Literacy is significant to an extent. We also see that we no longer get variables with p-values higher than 0.3, which showed how insignificant the variable would be.
+
+This model makes sense because the more the rape_rate, the lesser is the safety and lesser the housing value. On the other hand, an increase in commute means lesser area for real estate in the city. An increase in the household income ensures better standards of living. The more the Literacy and Job growth, the better job opportunities and money-minting opportunities within the cities, with the availability of skilled labour. Moreover, job growth ensures some of the top-tier executives and managers living within the city, and that indirectly leads to better education and a more lavish lifestyle.
+
+Thus, the conclusion is to invest in Literacy and Job Growth for better Housing values. As an advisor to the investor, I would wish for him to invest in cities with higher rates of Literacy and Job Growth, while keeping in mind the Incomes as well.
+
+```{r}
+predict(model_weighted2 , data[, -c(5,8,9)])
+```
+
+According to this, the best city to invest in would be K.

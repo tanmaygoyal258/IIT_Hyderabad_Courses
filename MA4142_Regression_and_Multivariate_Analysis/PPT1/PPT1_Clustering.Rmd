@@ -1,0 +1,143 @@
+Analyzing effects of dimensionality reduction on clustering
+Group 14:
+Tanmay Goyal - AI20BTECH11021
+Tanay Yadav - AI20BTECH11026
+
+Installing required libraries and attaching them
+````{r}
+# install.packages("psych")
+# install.packages("scatterplot3d")
+library(tidyverse)
+library(psych)
+library(scatterplot3d)
+```
+Reading the dataset (Wine Dataset)
+```{r}
+data<-read.csv("WineClustering.csv")
+```
+
+Viewing the Dataset
+```{r}
+dim(data)
+```
+
+```{r}
+head(data)
+````
+
+```{r}
+tail(data)
+```
+
+Checking if the dataset has NaN values
+```{r}
+colSums(is.na(data))
+```
+ 
+Scaling the dataset (Normalizing the Values)
+```{r}
+data.norm <- sapply(data, scale) 
+km <- kmeans(data.norm , 3)
+```
+
+Principal Component Analysis on the scaled dataset
+```{r}
+ fa.parallel(data , fa="pc" ,
+n.iter = 100 ,
+show.legend = FALSE,
+main = "Scree Plot with parallel analysis")
+```
+
+Performing PCA for 3 components
+```{r}
+pc3<-principal(data,nfactors=3) 
+pc3
+```
+        
+```{r}        
+pc3$scores
+```
+
+Clustering on reduced dataset with 3 dimensions and 2 dimensions
+```{r}
+km_reduced3 <- kmeans(pc3$scores , 3)
+print('Sizes of clusters in K-means without Dimensionality reduction: ') 
+print(km$size)
+print("Sizes of clusters in K-means with Dimensionality reduction: ") 
+print(km_reduced3$size)
+```
+
+```{r}
+print("The clusters in K-means without Dimensionality reduction: ") 
+print(km$cluster)
+print("The clusters in K-means with Dimensionality reduction: ") 
+print(km_reduced3$cluster)
+```
+
+```{r}
+scatterplot3d(pc3$scores[,1:3] , color = km_reduced3$cluster , angle = 55 , main = "Visualization of K-Means clustering using 3 Principal Components")
+```
+
+```{r}
+pc2 <- principal(data , nfactors = 2) 
+pc2$scores
+```
+
+
+```{r}
+km_reduced2 <- kmeans(pc2$scores , 3)
+print("The sizes of the clusters with 2 dimensions is : ") 
+print(km_reduced2$size)
+print("The cluster assignment for the data reduced to 2 dimensions is : ") 
+print(km_reduced2$cluster)
+```
+
+
+```{r}
+plot(pc2$scores[,1:2] , col = km_reduced2$cluster , main = "Visualization of K-Means Clustering using 2 Principal Components")
+```
+
+We can see that the clusters in 3D and 2D are very similar. However, the amount of information contained in the data also plays an important role in the clustering
+
+```{r}
+print('Principal Component Analysis for 3 components')
+print(pc3)
+```
+
+```{r}
+print('Principal Component Analysis for 2 components')
+print(pc2)
+```
+
+Based on the above outputs it is seen that 3 principal components model 67% of the variance of the original dataset while 2 principal components model 55% of the variance of the original dataset.
+
+Performing DBSCAN
+
+```{r}
+# install.packages("dbscan")
+library(dbscan)
+```
+
+```{r}
+db2 <- dbscan(pc2$scores , eps = 0.3) 
+db2
+```
+
+```{r}
+plot(pc2$scores[,1:2] , col = db2$cluster , main = "Clustering using DBSCAN")
+```
+
+The clusters of DBSCAN are different than that of K-Means. DBSCAN has also identified some outliers and classified them as noise points which are not represented in the plot.
+
+Ordering Points to Identify the Clustering Structure (OPTICS)
+
+```{r}
+op<-optics(pc2$scores,eps=0.3)
+r<-extractDBSCAN(op,eps_cl=0.8)
+r
+```
+
+```{r}
+plot(pc2$scores[,1:2] , col = r$cluster , main = "Clustering using OPTICS")
+```
+

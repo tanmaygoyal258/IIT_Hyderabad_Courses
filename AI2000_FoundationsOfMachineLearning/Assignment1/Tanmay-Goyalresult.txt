@@ -1,0 +1,5 @@
+accuracy: 0.7836
+ Improvement using Gini Index
+ accuracy: 0.7836
+ Improvement using Multi-way split
+ accuracy: 0.7836

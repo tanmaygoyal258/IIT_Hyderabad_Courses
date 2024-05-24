@@ -1,0 +1,28 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+B = np.array([2.8,0])
+E = np.array([0,-3.25])
+N = np.array([-2.8,0])
+D = np.array([0,3.25])
+O = np.array([0,0])
+
+plt.plot([B[0] , E[0]] , [B[1] , E[1]] , 'k-')
+plt.plot([E[0] , N[0]] , [E[1] , N[1]] , 'k-')
+plt.plot([N[0] , D[0]] , [N[1] , D[1]] , 'k-')
+plt.plot([D[0] , B[0]] , [D[1] , B[1]] , 'k-')
+plt.plot([B[0] , N[0]] , [B[1] , N[1]] , 'b-')
+plt.plot([E[0] , D[0]] , [E[1] , D[1]] , 'b-')
+plt.plot(B[0],B[1], 'ro')
+plt.plot(E[0],E[1], 'ro')
+plt.plot(N[0],N[1], 'ro')
+plt.plot(D[0],D[1], 'ro')
+plt.plot(O[0],O[1], 'ro')
+plt.text(B[0] + 0.1 , B[1] , "B(2.8,0)" , fontsize = 10 , color = 'r')
+plt.text(E[0] + 0.1  , E[1] - 0.1 , "E(0,-3.25)" , fontsize = 10 , color = 'r')
+plt.text(N[0] - 0.3 , N[1]-0.3 , "N(-2.8,0)" , fontsize = 10 , color = 'r')
+plt.text(D[0] + 0.1  , D[1] -0.1 , "D(0,3.25)" , fontsize = 10 , color = 'r')
+plt.text(0.1,0.1,"O(0,0)" , fontsize = 10 , color = 'r')
+plt.grid(True)
+plt.title("Rhombus $BEND$")
+plt.show()

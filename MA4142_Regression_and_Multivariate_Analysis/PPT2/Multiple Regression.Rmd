@@ -1,0 +1,321 @@
+---
+---
+---
+
+## Regression and Multivariate Analysis
+
+#### Authors:
+
+#### Tanmay Goyal : AI20BTECH11021
+
+#### Tanay Yadav : AI20BTECH11026
+
+Installing and loading the required libraries
+
+```{r}
+install.packages("ggcorrplot", repos = "http://cran.us.r-project.org")
+install.packages("psych", repos = "http://cran.us.r-project.org")
+install.packages("dplyr", repos = "http://cran.us.r-project.org")
+install.packages("ggpubr", repos = "http://cran.us.r-project.org")
+install.packages("regclass", repos = "http://cran.us.r-project.org")
+install.packages("lmtest", repos = "http://cran.us.r-project.org")
+install.packages("ridge", repos = "http://cran.us.r-project.org")
+```
+
+```{r}
+library(ggcorrplot)
+library(psych)
+library(dplyr)
+library(ggpubr)
+library(regclass)
+library(lmtest)
+library(ridge)
+```
+
+Finding the Correlation Plot
+
+```{r}
+data = read.csv("airfoil_self_noise.csv")
+data_corr = cor(data)
+ggcorrplot(data_corr)
+```
+
+The dataset is a NASA dataset comprising NACA 0012 airfoils, used for aircraft wings in different conditions such as Angle of Attack, Free Stream velocity, etc.
+
+We see that the variable Free Stream Velocity is uncorrelated with other variables. This shall play an inmportant role during Factor Analysis.
+
+```{r}
+fa.parallel(data, n.iter=100)
+```
+
+Principal Components predicts 3 components while Factor Analysis predicts 3 factors.
+
+```{r}
+fa = fa(data , nfactors = 3 , method = "both")
+fa$loadings
+```
+
+```{r}
+fa.diagram(fa$loadings)
+```
+
+We shall now check the density graphs for each of the variables.
+
+```{r}
+ggdensity(data$Frequency)
+```
+
+This looks like a right-tailed graph. (Important for when we do Box-Cox Transformation.)
+
+```{r}
+ggdensity(data$Angle.of.Attack)
+```
+
+```{r}
+ggdensity(data$Chord.length)
+```
+
+```{r}
+ggdensity(data$Free.stream.velocity)
+```
+
+```{r}
+ggdensity(data$Suction.side.displacement.thickness)
+```
+
+Again, this looks like a right-tailed graph.
+
+We now perform Shapiro-Wilk's test for checking normality.
+
+```{r}
+shapiro.test(data$Frequency)
+```
+
+```{r}
+shapiro.test(data$Angle.of.Attack)
+```
+
+```{r}
+shapiro.test(data$Chord.length)
+```
+
+```{r}
+shapiro.test(data$Free.stream.velocity)
+```
+
+```{r}
+shapiro.test(data$Suction.side.displacement.thickness)
+```
+
+We find that none of the columns are Normal based on the Shapiro-Wilk Test. This can be said due to the p-value, which is lower than 0.05, which causes us to reject the null-hypothesis, which states that the data is not normally distributed.
+
+We shall also make the Q-Q plots to check the normality.
+
+```{r}
+ggqqplot(data$Frequency)
+```
+
+```{r}
+ggqqplot(data$Angle.of.Attack)
+```
+
+```{r}
+ggqqplot(data$Chord.length)
+```
+
+```{r}
+ggqqplot(data$Free.stream.velocity)
+```
+
+```{r}
+ggqqplot(data$Suction.side.displacement.thickness)
+```
+
+A Q-Q plot assumes the second distribution to be normal and plots the quartiles for it, which lies on a line with slope approximately 45 degrees. If the data also lies on a similar line, then we can say it is normally distributed.
+
+We shall now fit the Linear Regression model.
+
+```{r}
+model = lm(Scaled.sound.pressure.level ~ ., data = data)
+model
+```
+
+```{r}
+summary(model)
+```
+
+We see that the p-values for all variables is less than 0.05. Thus, we can reject the null hypothesis for each of the variables, which states that the coefficient for that variable is 0 and thus, there is no significant relationship between the variable and the target. Since we are rejecting the null hypothesis, we can say there is a significant relationship between the two.
+
+We also get an adjusted R-squared value of 0.51, which is good enough for starters, but should be improved upon.
+
+We also perform VIF (Variance Inflation Factor) on the model:
+
+```{r}
+
+VIF(model)
+```
+
+Since none of the factors are very high, we can say that none of the feature variables can be explained in terms of the other, and hence, each of these independent variables are uncorrelaed with each other.
+
+We now check for Heteroschadasticity by plotting the residuals and the fitted values.
+
+```{r}
+plot(predict(model) , residuals(model))
+```
+
+We find that there is a kind-of cone structure that is being formed. Thus, we can not simply assume the data to be Homoschadistic.
+
+We also check for the Autocorrelation using the Durbin-Watson test.
+
+```{r}
+dwtest(formula = model , alternative = "two.sided")
+```
+Thus, our data does seem to be correlated.
+
+Weighted Least Squares for hetereschadasticity
+```{r}
+wt <- 1 / lm(abs(model$residuals) ~ model$fitted.values)$fitted.values^2
+wls_model <- lm(data$Scaled.sound.pressure.level ~ . , data = data , weights = wt)
+summary(wls_model)
+```
+
+We observe that our adjusted R-squared score increases.
+
+We now apply the Box-Cox transformation. Note that it doesn't always work the way we wish to, as we shall see soon.
+
+```{r}
+newSSPL = caret::BoxCoxTrans(data$Scaled.sound.pressure.level)
+newF = caret::BoxCoxTrans(data$Frequency)
+newAA = caret::BoxCoxTrans(data$Angle.of.Attack)
+newFsv = caret::BoxCoxTrans(data$Free.stream.velocity)
+newC = caret::BoxCoxTrans(data$Chord.length)
+newSSdt = caret::BoxCoxTrans(data$Suction.side.displacement.thickness)
+
+newdata = cbind(Frequency = predict(newF , data$Frequency), Angle.of.Attack = predict(newAA,data$Angle.of.Attack) , Free.stream.velocity = predict(newFsv , data$Free.stream.velocity),Chord.length = predict(newC , data$Chord.length),
+Suction.side.displacement.thickness = predict(newSSdt , data$Suction.side.displacement.thickness),
+                 Scaled.sound.pressure.level = predict(newSSPL , data$Scaled.sound.pressure.level))
+
+newdata = data.frame(newdata)
+```
+
+Plotting the densities of the variables after Box-Cox transformation.
+
+```{r}
+ggdensity(newdata$Frequency)
+```
+
+This was a right-tailed distribution. It does look Normal now.
+
+```{r}
+ggdensity(newdata$Angle.of.Attack)
+```
+
+This remains the same.
+
+```{r}
+ggdensity(newdata$Chord.length)
+```
+
+This, too, remains the same.
+
+```{r}
+ggdensity(newdata$Free.stream.velocity)
+```
+
+Again, the same.
+
+```{r}
+ggdensity(newdata$Suction.side.displacement.thickness)
+```
+
+This does look closer to Normal than before.
+
+We shall again perform Shapiro-Wilk's test:
+
+```{r}
+shapiro.test(newdata$Frequency)
+```
+
+Even though the p-value is lower than 0.05, it has still increased (previously it was of the order of -16).
+
+```{r}
+shapiro.test(newdata$Angle.of.Attack)
+```
+
+```{r}
+shapiro.test(newdata$Chord.length)
+```
+
+```{r}
+shapiro.test(newdata$Free.stream.velocity)
+```
+
+```{r}
+shapiro.test(newdata$Suction.side.displacement.thickness)
+```
+
+Again, here, even though the p-value is still lesser than 0.05, it has increased from the previous time.
+
+However, our variables are still not Normal as per the Shapiro-Wilk test.
+
+Plotting the Q-Q curves:
+
+```{r}
+ggqqplot(newdata$Frequency)
+```
+
+```{r}
+ggqqplot(newdata$Angle.of.Attack)
+```
+
+```{r}
+ggqqplot(newdata$Chord.length)
+```
+
+```{r}
+ggqqplot(newdata$Free.stream.velocity)
+```
+
+```{r}
+ggqqplot(newdata$Suction.side.displacement.thickness)
+```
+
+Again, the first and last graphs are much closer to normality, however, we still cannot call them to be normally distributed.
+
+We shall now run the Linear Regression Model on the new variables that were transformed using the Box-Cox Transformation.
+
+```{r}
+model2 <- lm(newdata$Scaled.sound.pressure.level ~ . , data = newdata)
+model2
+```
+
+```{r}
+summary(model2)
+```
+
+Again, we find that all the p-values for the variables is lesser than 0.05. Thus, we reject the null hypothesis that these variables do not contribute significantly to the target.
+
+We get a adjusted R-squared value of 0.45, which is lower than last time.
+
+```{r}
+dwtest(model2 , alternative = "two.sided")
+```
+
+Finally, we shall try the Ridge Regression:
+
+```{r}
+model_ridge <- linearRidge(Scaled.sound.pressure.level~. , data = data )
+summary(model_ridge)
+```
+
+Once again, we reject the null hypothesis that the variables do not contribute significantly to the target variable. We achieve an adjusted R-squared value of 0.481 as calculated in the cell below.
+
+```{r}
+y_pred <- predict(model_ridge , newdata = data[,1:5])
+y<- data$Scaled.sound.pressure.level
+sst <- sum((y - mean(y))^2)
+sse <- sum((y_pred - y)^2)
+R_square <- 1 - sse/sst * (1502 / 1496)
+R_square
+```
+
